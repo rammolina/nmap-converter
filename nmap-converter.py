@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from libnmap.parser import NmapParser, NmapParserException
 from xlsxwriter import Workbook
@@ -19,7 +19,6 @@ class HostModule():
         self.method = ""
         self.source = ""
         self.confidence = ""
-        self.reason = ""
         self.reason = ""
         self.product = ""
         self.version = ""
@@ -115,7 +114,7 @@ def generate_hosts(workbook, sheet, report):
     sheet.lastrow = row
 
 
-def generate_results(workbook, sheet, report):
+def generate_results_scripts(workbook, sheet, report):
     sheet.autofilter("A1:N1")
     sheet.freeze_panes(1, 0)
 
@@ -169,6 +168,47 @@ def generate_results(workbook, sheet, report):
                                            "source": ["Y", "N", "N/A"]})
     sheet.lastrow = row
 
+def generate_results(workbook, sheet, report):
+    sheet.autofilter("A1:N1")
+    sheet.freeze_panes(1, 0)
+
+    results_header = ["Host", "IP", "Port", "Protocol", "Status", "Service", "Product", "Version", "Extra", "Tunnel", "Source", "Method", "Confidence", "Reason", "Flagged", "Notes"]
+    results_body = {"Host": lambda module: module.host,
+                    "IP": lambda module: module.ip,
+                    "Port": lambda module: module.port,
+                    "Protocol": lambda module: module.protocol,
+                    "Status": lambda module: module.status,
+                    "Service": lambda module: module.service,
+                    "Product": lambda module: module.product,
+                    "Version": lambda module: module.version,
+                    "Extra": lambda module: module.extra,                    
+                    "Tunnel": lambda module: module.tunnel,
+                    "Source": lambda module: module.source,
+                    "Method": lambda module: module.method,
+                    "Confidence": lambda module: module.confidence,
+                    "Reason": lambda module: module.reason,
+                    "Flagged": lambda module: module.flagged,
+                    "Notes": lambda module: module.notes}
+
+    results_format = {"Confidence": workbook.myformats["fmt_conf"]}
+
+    print("[+] Processing {}".format(report.summary))
+    for idx, item in enumerate(results_header):
+        sheet.write(0, idx, item, workbook.myformats["fmt_bold"])
+
+    row = sheet.lastrow
+    for host in report.hosts:
+        print("[+] Processing {}".format(host))
+
+        for service in host.services:
+            module = ServiceModule(host, service)
+            for idx, item in enumerate(results_header):
+                sheet.write(row + 1, idx, results_body[item](module), results_format.get(item, None))
+            row += 1
+
+    sheet.data_validation("O2:O${}".format(row + 1), {"validate": "list",
+                                           "source": ["Y", "N", "N/A"]})
+    sheet.lastrow = row
 
 def setup_workbook_formats(workbook):
     formats = {"fmt_bold": workbook.add_format({"bold": True}),
@@ -192,7 +232,8 @@ def os_string(os_class):
 def main(reports, workbook):
     sheets = {"Summary": generate_summary,
               "Hosts": generate_hosts,
-              "Results": generate_results}
+              "Results": generate_results,
+              "Results_Scripts": generate_results_scripts}
 
     workbook.myformats = setup_workbook_formats(workbook)
 
@@ -207,7 +248,7 @@ def main(reports, workbook):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--output", metavar="XLS", help="path to xlsx output")
+    parser.add_argument("-o", "--output", metavar="XLSX", help="path to xlsx output")
     parser.add_argument("reports", metavar="XML", nargs="+", help="path to nmap xml report")
     args = parser.parse_args()
 
