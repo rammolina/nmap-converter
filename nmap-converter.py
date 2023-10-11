@@ -53,7 +53,7 @@ class HostScriptModule(HostModule):
         super(HostScriptModule, self).__init__(host)
         self.method = script["id"]
         self.source = "script"
-        self.extra = script["output"].strip()
+        self.extra = script.get("output", "").strip()
 
 
 class ServiceScriptModule(ServiceModule):
@@ -61,7 +61,7 @@ class ServiceScriptModule(ServiceModule):
         super(ServiceScriptModule, self).__init__(host, service)
         self.source = "script"
         self.method = script["id"]
-        self.extra = script["output"].strip()
+        self.extra = script.get("output", "").strip()
 
 
 def _tgetattr(object, name, default=None):
